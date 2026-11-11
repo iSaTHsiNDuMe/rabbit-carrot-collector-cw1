@@ -13,6 +13,7 @@ public sealed class Student3RabbitController : MonoBehaviour
     float verticalSpeed;
     float cameraYaw;
     float cameraPitch = 35.8f;
+    float cameraDistance = 4.87f;
     bool mouseLook;
     readonly RaycastHit[] cameraHits = new RaycastHit[12];
 
@@ -68,14 +69,17 @@ public sealed class Student3RabbitController : MonoBehaviour
             }
             return;
         }
-        if (!mouseLook) return;
-        if (Cursor.lockState != CursorLockMode.Locked)
-        {
-            ReleaseMouse();
-            return;
-        }
         var mouse = Mouse.current;
         if (mouse == null) return;
+
+        // Mouse controls (added with AI assistance): scroll wheel zooms the camera,
+        // and holding the right mouse button rotates it without pressing C.
+        float scroll = mouse.scroll.ReadValue().y;
+        if (Mathf.Abs(scroll) > .01f)
+            cameraDistance = Mathf.Clamp(cameraDistance - Mathf.Sign(scroll) * .4f, 2f, 9f);
+
+        if (mouseLook && Cursor.lockState != CursorLockMode.Locked) ReleaseMouse();
+        if (!mouseLook && !mouse.rightButton.isPressed) return;
         var delta = mouse.delta.ReadValue();
         cameraYaw = Mathf.Repeat(cameraYaw + delta.x * .16f, 360f);
         cameraPitch = Mathf.Clamp(cameraPitch - delta.y * .14f, 10f, 65f);
@@ -120,7 +124,7 @@ public sealed class Student3RabbitController : MonoBehaviour
         if (!followCamera) return;
         var focus = transform.position + Vector3.up * .70f;
         var orbit = Quaternion.Euler(cameraPitch, cameraYaw, 0);
-        var offset = orbit * (Vector3.back * 4.87f);
+        var offset = orbit * (Vector3.back * cameraDistance);
         var direction = offset.normalized;
         float distance = offset.magnitude;
         int hits = Physics.SphereCastNonAlloc(focus, .16f, direction, cameraHits, distance,
